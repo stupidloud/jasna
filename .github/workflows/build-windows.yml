@@ -64,7 +64,7 @@ jobs:
       - name: Download the official Windows release (${{ env.BASE_TAG }})
         run: |
           New-Item -ItemType Directory -Force base | Out-Null
-          gh release download $env:BASE_TAG --repo $env:BASE_REPO --pattern "jasna-windows-*.7z.*" --dir base
+          gh release download $env:BASE_TAG --repo $env:BASE_REPO --pattern "jasna-windows-[0-9]*.7z.*" --dir base
           Get-ChildItem base | Format-Table Name, @{n="MB";e={[int]($_.Length/1MB)}}
 
       - name: Extract the base and drop the archive
