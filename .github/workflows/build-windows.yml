@@ -1,0 +1,177 @@
+name: Build Windows package (NVIDIA)
+
+# Overlay build: every run downloads the official Kruk2/jasna Windows release,
+# keeps its binary payload (CUDA torch, TensorRT, NVIDIA Video Effects, VALI,
+# ffmpeg, model weights) and swaps in this checkout's application code with a
+# small embedding launcher. See packaging/windows/assemble_dist.py.
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_tag:
+        description: "Official Kruk2/jasna release used as the base"
+        required: true
+        default: "v0.10.0"
+      publish:
+        description: "Also publish the result as a release on this repository"
+        type: boolean
+        default: false
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-windows-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 240
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      BASE_TAG: ${{ inputs.base_tag || 'v0.10.0' }}
+      BASE_REPO: Kruk2/jasna
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          # The official package ships CPython 3.13; the base's extension
+          # modules (torch, VALI, TensorRT) are built for that ABI.
+          python-version: "3.13"
+
+      - name: Report disk space
+        run: Get-PSDrive -PSProvider FileSystem | Format-Table Name, @{n="Free(GB)";e={[int]($_.Free/1GB)}}, @{n="Used(GB)";e={[int]($_.Used/1GB)}}
+
+      - name: Read GPU-stack pins from pyproject
+        id: pins
+        run: |
+          python packaging/windows/pins.py | Tee-Object -FilePath pins.txt
+          Get-Content pins.txt | Add-Content -Path $env:GITHUB_OUTPUT
+          $sha = (git rev-parse --short HEAD).Trim()
+          $app = (Select-String -Path pins.txt -Pattern '^app_version=(.*)$').Matches[0].Groups[1].Value
+          $ref = "${{ github.ref_name }}"
+          $version = if ("${{ github.ref_type }}" -eq "tag") { $ref.TrimStart("v") } else { "$app-$sha" }
+          "version=$version" | Add-Content -Path $env:GITHUB_OUTPUT
+          "package version: $version"
+
+      - name: Download the official Windows release (${{ env.BASE_TAG }})
+        run: |
+          New-Item -ItemType Directory -Force base | Out-Null
+          gh release download $env:BASE_TAG --repo $env:BASE_REPO --pattern "jasna-windows-*.7z.*" --dir base
+          Get-ChildItem base | Format-Table Name, @{n="MB";e={[int]($_.Length/1MB)}}
+
+      - name: Extract the base and drop the archive
+        run: |
+          $first = Get-ChildItem base\jasna-windows-*.7z.001 | Select-Object -First 1
+          7z x $first.FullName -obase\extracted -y -bso0 -bsp0
+          Remove-Item base\*.7z.* -Force
+          "extracted entries: $((Get-ChildItem -Recurse base\extracted | Measure-Object).Count)"
+
+      - name: Install dependencies into a build venv
+        run: |
+          python -m venv .venv
+          .venv\Scripts\python -m pip install --upgrade pip
+          # CPU torch/torchvision from PyPI, pinned to the release the base was
+          # built from: only torchgen/functorch and the torchvision sources are
+          # taken from them, the CUDA binaries come from the base.
+          "torch==${{ steps.pins.outputs.torch }}`ntorchvision==${{ steps.pins.outputs.torchvision }}" | Set-Content constraints.txt
+          .venv\Scripts\python -m pip install -c constraints.txt "torch==${{ steps.pins.outputs.torch }}" "torchvision==${{ steps.pins.outputs.torchvision }}"
+          .venv\Scripts\python -m pip install -c constraints.txt .
+          .venv\Scripts\python -m pip install --no-deps "${{ steps.pins.outputs.tensorrt_bindings }}==${{ steps.pins.outputs.tensorrt }}" ziglang
+          .venv\Scripts\python -m pip list
+
+      - name: Apply source patches to site-packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          for diff in patches/*.diff; do
+            echo "== $diff"
+            if command -v patch >/dev/null; then
+              patch -p1 -d .venv/Lib/site-packages < "$diff"
+            else
+              git apply -p1 --directory=.venv/Lib/site-packages --unsafe-paths "$diff"
+            fi
+          done
+
+      - name: Build the launcher (jasna.exe)
+        run: |
+          New-Item -ItemType Directory -Force build | Out-Null
+          .venv\Scripts\python -m ziglang cc -target x86_64-windows-gnu -O2 -municode `
+            -I "$env:pythonLocation\include" packaging\windows\launcher.c `
+            -L "$env:pythonLocation\libs" -lpython313 -o build\jasna.exe
+          Get-Item build\jasna.exe | Format-Table Name, Length
+
+      - name: Assemble the distribution
+        run: |
+          .venv\Scripts\python packaging\windows\assemble_dist.py `
+            --base base\extracted --base-tag $env:BASE_TAG `
+            --python "$env:pythonLocation" `
+            --site-packages .venv\Lib\site-packages `
+            --source . `
+            --launcher build\jasna.exe `
+            --out dist\jasna `
+            --move-base
+          Remove-Item -Recurse -Force base, .venv
+          Get-Content dist\jasna\BUILD_INFO.txt
+
+      - name: Smoke test
+        run: |
+          Push-Location dist\jasna
+          try {
+            $v = (& .\jasna.exe --version) | Out-String
+            "version: $($v.Trim())"
+            if ($LASTEXITCODE -ne 0) { throw "jasna.exe --version failed ($LASTEXITCODE)" }
+            $help = (& .\jasna.exe --help) | Out-String
+            if ($LASTEXITCODE -ne 0) { throw "jasna.exe --help failed ($LASTEXITCODE)" }
+            if ($help -notmatch "--burn-subtitles") { throw "--help does not list --burn-subtitles" }
+            # Creates a CustomTkinter root and checks the font backend, then exits.
+            $env:JASNA_GUI_FONT_PROBE = "1"
+            & .\jasna.exe
+            if ($LASTEXITCODE -ne 0) { Write-Warning "GUI font probe exited with $LASTEXITCODE (headless runner?)" }
+            Remove-Item Env:JASNA_GUI_FONT_PROBE
+          } finally {
+            Pop-Location
+          }
+
+      - name: Pack into split 7z volumes
+        run: |
+          New-Item -ItemType Directory -Force out | Out-Null
+          $name = "jasna-windows-${{ steps.pins.outputs.version }}.7z"
+          Push-Location dist\jasna
+          7z a -t7z -mx=5 -md=64m -ms=on -mmt=on -v2000m "..\..\out\$name" * -bso0 -bsp0
+          Pop-Location
+          Remove-Item -Recurse -Force dist
+          Get-ChildItem out | Format-Table Name, @{n="MB";e={[int]($_.Length/1MB)}}
+          Get-ChildItem out | Get-FileHash -Algorithm SHA256 | ForEach-Object { "$($_.Hash)  $(Split-Path $_.Path -Leaf)" } | Set-Content "out\SHA256SUMS.txt"
+          Get-Content out\SHA256SUMS.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: jasna-windows-${{ steps.pins.outputs.version }}
+          path: out/*
+          compression-level: 0
+          retention-days: 14
+
+      - name: Publish release on this repository
+        if: github.ref_type == 'tag' || inputs.publish
+        run: |
+          $tag = if ("${{ github.ref_type }}" -eq "tag") { "${{ github.ref_name }}" } else { "build-${{ steps.pins.outputs.version }}" }
+          $notes = @(
+            "Overlay build of this fork on top of the official $env:BASE_REPO $env:BASE_TAG Windows package.",
+            "",
+            'Extract all volumes together (7-Zip opens the `.001` file) into a folder whose path has only ASCII characters, then run `jasna.exe`.',
+            "Supporter-only models (unet-4x, SD 1.5) are not available in this build."
+          ) -join "`n"
+          Set-Content -Path release-notes.md -Value $notes
+          gh release view $tag --repo ${{ github.repository }} *> $null
+          if ($LASTEXITCODE -ne 0) {
+            gh release create $tag --repo ${{ github.repository }} --title "Jasna Windows $tag" --notes-file release-notes.md --target ${{ github.sha }}
+          }
+          gh release upload $tag (Get-ChildItem out\* | ForEach-Object { $_.FullName }) --repo ${{ github.repository }} --clobber

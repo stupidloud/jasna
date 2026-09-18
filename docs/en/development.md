@@ -171,6 +171,29 @@ CSVs are the only full record. `scripts/benchmark_releases.py` compares frozen
 release archives instead of the working tree, and
 `scripts/benchmark_lada_flatpak.py` refreshes the Lada baseline column.
 
+## Windows overlay build (this fork)
+
+The official Windows package is produced with Nuitka and private release
+tooling, so this fork builds its Windows (NVIDIA) package differently: the
+GitHub Actions workflow `.github/workflows/build-windows.yml` downloads an
+official `Kruk2/jasna` release every time it runs, keeps that package's binary
+payload and swaps in the application from the checkout.
+
+| From the official package | From the build |
+| --- | --- |
+| `torch/` (CUDA 13), `torch_tensorrt/`, `tensorrt*/`, `nvvfx/`, `python_vali/` (the corruption-tolerant fork), `vlc/`, `tools/` (full-build ffmpeg with libass), `model_weights/`, `assets/`, root DLLs | `jasna/` source and its `.fatbin` kernels, `jasna.exe` (`packaging/windows/launcher.c`, a small embedding launcher compiled with zig), CPython 3.13 runtime and `Lib\`, every other dependency from PyPI (`packaging/windows/pins.py` keeps torchvision/TensorRT bindings on the release's versions) |
+
+`packaging/windows/assemble_dist.py` puts the pieces together in the official
+flat layout. Supporter-only pieces (`unet-4x.onnx.enc`, `protection\_core.dll`)
+are dropped because the public checkout cannot drive them.
+
+Run it from the Actions tab (`workflow_dispatch`, pick the base release tag)
+or push a `v*` tag; the split `.7z` volumes land in the run's artifacts and,
+for tags or when *publish* is ticked, in a release on the fork. Locally the
+same steps work with any CPython 3.13 install, a venv with `pip install .`
+plus `tensorrt-cu13-bindings` and `ziglang`, and an extracted official package
+passed as `--base`.
+
 ## AMD release builds
 
 These scripts live in the private protection submodule and are for the
