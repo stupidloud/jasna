@@ -97,6 +97,8 @@ Still images route here automatically; `--restoration-model-name` is video-only.
 | `--encoder-settings` | — | Advanced settings as a JSON object or comma-separated `key=value` pairs, e.g. `{"rc-lookahead":32}` or `rc-lookahead=32,bf=4`. See below. |
 | `--lut` | — | `.cube` color LUT (1D or 3D) applied on GPU before encoding. Also available in the GUI's Encoding section. |
 | `--sharpen` | `0` | Sharpen the picture before encoding, from `0` (off) to `1` (strongest). Matches ffmpeg's `cas` filter, so no second pass is needed. See [Advanced processing](advanced_processing.md). |
+| `--burn-subtitles` | — | Burn an `.ass`/`.ssa` subtitle file into the picture during the single encode pass. Pass a file, or `auto` to use `video.ass` (then `video.ssa`) next to each input video. Offline exports only; not available with `--segments`. See [Advanced processing](advanced_processing.md). |
+| `--subtitle-fonts-dir` | — | Extra folder of fonts for `--burn-subtitles`, on top of the fonts installed on the system. |
 | `--retarget-high-fps` | off | 60 → 30 FPS (and 59.94 → 29.97) by processing every second frame. Other rates unchanged; audio timing preserved. |
 | `--fmp4` | off | Play `.mp4`/`.mov` output while it is still being made; it also survives an interrupted job. Not available with `--stream` or `--segments`. See [Advanced processing](advanced_processing.md). |
 | `--segments` | — | Restore only selected ranges, e.g. `10-25,01:10-01:30.5`. Cannot be combined with `--stream`, `--retarget-high-fps`, or `--fmp4`. See [Segments](segments.md). |

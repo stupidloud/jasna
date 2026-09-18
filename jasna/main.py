@@ -27,6 +27,8 @@ def _session_config_from_args(
     detection_model_path: Path,
     restoration_model_path: Path,
     lut_path: str | None,
+    burn_subtitles: str | None = None,
+    subtitle_fonts_dir: str | None = None,
 ) -> SessionConfig:
     from jasna.mosaic.detection_registry import recommended_score_threshold
 
@@ -70,6 +72,8 @@ def _session_config_from_args(
         fmp4=bool(args.fmp4),
         disable_progress=bool(args.no_progress),
         working_dir=Path(args.working_directory) if args.working_directory else None,
+        burn_subtitles=burn_subtitles,
+        subtitle_fonts_dir=subtitle_fonts_dir,
     )
 
 
@@ -474,6 +478,20 @@ def build_parser() -> argparse.ArgumentParser:
         help="Path to a .cube color LUT (1D or 3D) applied on GPU before encoding.",
     )
     encoding.add_argument(
+        "--burn-subtitles",
+        type=str,
+        default="",
+        metavar="PATH|auto",
+        help=CLI_HELP["burn_subtitles"],
+    )
+    encoding.add_argument(
+        "--subtitle-fonts-dir",
+        type=str,
+        default="",
+        metavar="DIR",
+        help=CLI_HELP["subtitle_fonts_dir"],
+    )
+    encoding.add_argument(
         "--sharpen",
         type=float,
         default=0.0,
@@ -565,6 +583,12 @@ def main() -> None:
         parser.error("--retarget-high-fps is only supported for offline exports")
     if is_streaming and args.fmp4:
         parser.error("--fmp4 is only supported for offline exports")
+    burn_subtitles = str(args.burn_subtitles).strip() or None
+    subtitle_fonts_dir = str(args.subtitle_fonts_dir).strip() or None
+    if is_streaming and burn_subtitles:
+        parser.error("--burn-subtitles is only supported for offline exports")
+    if subtitle_fonts_dir and not burn_subtitles:
+        parser.error("--subtitle-fonts-dir requires --burn-subtitles")
     from jasna.post_export_action import (
         PostExportVideoCommandError,
         run_post_export_action_safely,
@@ -651,6 +675,8 @@ def main() -> None:
             parser.error("--segments requires a single video input, not a folder")
         if args.fmp4:
             parser.error("--fmp4 cannot be combined with --segments")
+        if burn_subtitles:
+            parser.error("--burn-subtitles cannot be combined with --segments")
 
     folder_videos: list[Path] = []
     folder_output_dir: Path | None = None
@@ -838,6 +864,15 @@ def main() -> None:
     lut_arg = str(args.lut).strip()
     if lut_arg and not Path(lut_arg).exists():
         raise FileNotFoundError(lut_arg)
+    from jasna.media.subtitle_burn import BURN_SUBTITLES_AUTO
+    if (
+        burn_subtitles
+        and burn_subtitles.lower() != BURN_SUBTITLES_AUTO
+        and not Path(burn_subtitles).is_file()
+    ):
+        raise FileNotFoundError(burn_subtitles)
+    if subtitle_fonts_dir and not Path(subtitle_fonts_dir).is_dir():
+        raise FileNotFoundError(subtitle_fonts_dir)
 
     config = _session_config_from_args(
         args,
@@ -847,6 +882,8 @@ def main() -> None:
         detection_model_path=detection_model_path,
         restoration_model_path=restoration_model_path,
         lut_path=lut_arg or None,
+        burn_subtitles=burn_subtitles,
+        subtitle_fonts_dir=subtitle_fonts_dir,
     )
 
     from jasna.session_factory import build_pipeline, build_restoration_session

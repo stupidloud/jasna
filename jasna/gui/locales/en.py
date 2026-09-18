@@ -300,6 +300,10 @@ EN = {
         "dialog_select_working_directory": "Select working directory",
         "tip_working_directory": "Folder used for temporary files while assembling segment output.\nLeave empty to use the output video's folder.",
         "tip_lut_path": "Optional .cube color LUT applied on GPU just before encoding.\nSupports both 1D and 3D LUTs (e.g. exported from Adobe Premiere or DaVinci Resolve).\nUseful for fixing raised blacks, white balance, etc. without an extra encoding pass.",
+        "burn_subtitles": "Burn-in subtitles (.ass)",
+        "burn_subtitles_placeholder": "Optional, .ass/.ssa file, or 'auto' for a sidecar next to each video",
+        "dialog_select_subtitles": "Select subtitles (.ass/.ssa)",
+        "tip_burn_subtitles": "Burn an .ass/.ssa subtitle file into the picture while the video is encoded, with no extra pass.\nEnter a file to use it for every video, or 'auto' to use video.ass (or video.ssa) next to each input.\nText is rendered by the bundled ffmpeg with the fonts installed on this computer.\nRe-encodes the whole video, so it is not used with segments. Not shown in the preview.",
         "sharpen_strength": "Sharpening",
         "retarget_high_fps": "Reduce 60 FPS to 30 FPS",
         "tip_sharpen_strength": "Makes edges and fine detail look crisper as the video is written.\n0 turns it off. 0.2-0.5 is a gentle boost; 1.0 is the strongest and can look harsh.\nA sharper picture needs a bigger file, so lower the CQ value if the result looks worse.\nNot shown in the preview.",
@@ -521,4 +525,5 @@ EN = {
         "error_tvai_data_dir_missing": "TVAI_MODEL_DATA_DIR does not point to an existing directory: {path}",
         "error_tvai_model_dir_missing": "TVAI_MODEL_DIR does not point to an existing directory: {path}",
         "error_tvai_ffmpeg_not_found": "TVAI ffmpeg not found: {path}",
+        "error_subtitles_not_found": "Subtitle file not found: {path}",
 }

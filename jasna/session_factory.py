@@ -173,4 +173,6 @@ def build_pipeline(
         segments=segments,
         splice_plan=splice_plan,
         working_dir=config.working_dir,
+        burn_subtitles=config.burn_subtitles,
+        subtitle_fonts_dir=config.subtitle_fonts_dir,
     )

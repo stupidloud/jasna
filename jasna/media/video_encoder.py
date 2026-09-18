@@ -41,6 +41,7 @@ from jasna.media.container_utils import (
 from jasna.media.encoder_quality import encoder_cq_spec
 from jasna.media.lut import GpuLutApplier, parse_cube_file
 from jasna.media.rgb_to_yuv import RgbToYuvConverter
+from jasna.media.subtitle_burn import AssSubtitleBurner
 
 av.logging.set_level(logging.ERROR)
 
@@ -419,6 +420,8 @@ class NvidiaVideoEncoder:
         match_input_bit_depth: bool = False,
         smart_fragment: bool = False,
         fmp4: bool = False,
+        subtitle_path: str | Path | None = None,
+        subtitle_fonts_dir: str | Path | None = None,
     ):
         self.device = torch.device(device)
         self.vendor = vendor_for_device(self.device)
@@ -485,6 +488,12 @@ class NvidiaVideoEncoder:
             self._cas = GpuCasSharpener(
                 sharpen_strength, ten_bit=spec.ten_bit, device=self.device
             )
+
+        # Rendered by an external ffmpeg at the output rate and composited on
+        # the GPU after the LUT, so the text keeps its authored colours.
+        self.subtitle_path = Path(subtitle_path) if subtitle_path else None
+        self.subtitle_fonts_dir = subtitle_fonts_dir
+        self._subtitles: AssSubtitleBurner | None = None
 
         self._converter = RgbToYuvConverter(converter_variant, device=self.device)
 
@@ -640,6 +649,25 @@ class NvidiaVideoEncoder:
         self._options_validated = False
         self._worker_error: Exception | None = None
 
+        if self.subtitle_path is not None:
+            try:
+                self._subtitles = AssSubtitleBurner(
+                    self.subtitle_path,
+                    width=width,
+                    height=height,
+                    fps=self.output_fps,
+                    device=self.device,
+                    fonts_dir=self.subtitle_fonts_dir,
+                )
+            except OSError as exc:
+                # __exit__ never runs when __enter__ raises, so release the
+                # containers here instead of leaving a half-written output.
+                self.dst.close()
+                self._src.close()
+                raise RuntimeError(
+                    f"Cannot start ffmpeg to render subtitles from {self.subtitle_path}: {exc}"
+                ) from exc
+
         self._stop_sentinel = object()
         self._encode_queue: queue.Queue = queue.Queue(maxsize=self.BUFFER_MAX_SIZE)
         self._encode_thread = threading.Thread(target=self._encode_worker, name="NvidiaVideoEncoderWorker", daemon=True)
@@ -791,6 +819,9 @@ class NvidiaVideoEncoder:
                     self._mux_video(packet)
                 self._drain_source_streams()
         finally:
+            if self._subtitles is not None:
+                self._subtitles.close()
+                self._subtitles = None
             self.dst.close()
             self._src.close()
         if exc_type is None and self._worker_error is not None:
@@ -1007,11 +1038,19 @@ class NvidiaVideoEncoder:
         self._cas.sharpen_into(luma, packed[:height])
         return packed
 
+    def _source_seconds(self, pts: int) -> float:
+        # Subtitles are authored against the player timeline, which starts at
+        # the stream's first timestamp rather than at pts 0.
+        source_pts = int(pts) + self.pts_origin - int(self.metadata.start_pts)
+        return float(source_pts * self.metadata.time_base)
+
     def _encode_frame(self, frame: torch.Tensor, pts: int, *, apply_lut: bool = True):
         height = self.metadata.video_height
         with stream_context(self.stream):
             if apply_lut and self._lut_applier is not None:
                 frame = self._lut_applier.apply(frame)
+            if self._subtitles is not None:
+                frame = self._subtitles.composite(frame, self._source_seconds(pts))
             packed = self._to_yuv(frame, height)
             if self.vendor is AcceleratorVendor.NVIDIA:
                 packed = _align_yuv_pitch(packed)

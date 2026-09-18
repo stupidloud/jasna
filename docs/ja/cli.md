@@ -97,6 +97,8 @@ Windows では、CLI もアプリ本体と同じファイルです: `jasna.exe -
 | `--encoder-settings` | — | 高度な設定を JSON オブジェクトまたはカンマ区切りの `key=value` で指定。例: `{"rc-lookahead":32}` または `rc-lookahead=32,bf=4`。下記参照。 |
 | `--lut` | — | エンコード前に GPU で適用される `.cube` カラー LUT（1D または 3D）。GUI のエンコードセクションでも設定できます。 |
 | `--sharpen` | `0` | エンコード前に映像をシャープにします。`0`（無効）〜`1`（最強）。ffmpeg の `cas` フィルターと同じ結果になるため、再エンコードは不要です。詳しくは[高度な処理](advanced_processing.md)。 |
+| `--burn-subtitles` | — | 1 回のエンコード中に `.ass`/`.ssa` 字幕を映像に焼き込みます。ファイルを指定するか、`auto` で各入力動画と同名の `video.ass`（次に `video.ssa`）を使います。オフライン書き出し専用で、`--segments` とは併用できません。詳しくは[高度な処理](advanced_processing.md)。 |
+| `--subtitle-fonts-dir` | — | `--burn-subtitles` 用に、システムにインストール済みのフォントに加えて使うフォントフォルダー。 |
 | `--retarget-high-fps` | オフ | 1 フレームおきに処理して 60 → 30 FPS（および 59.94 → 29.97）に変換。他のレートは変更せず、音声のタイミングは維持されます。 |
 | `--fmp4` | オフ | 作成中の `.mp4` / `.mov` 出力をそのまま再生できます。中断してもファイルは再生可能なままです。`--stream` および `--segments` とは併用できません。詳しくは[高度な処理](advanced_processing.md)。 |
 | `--segments` | — | 選択した範囲だけを復元します。例: `10-25,01:10-01:30.5`。`--stream`、`--retarget-high-fps`、`--fmp4` とは併用できません。詳しくは[区間](segments.md)。 |

@@ -300,6 +300,10 @@ ZH = {
         "dialog_select_working_directory": "选择工作目录",
         "tip_working_directory": "组装分段输出时用于临时文件的文件夹。\n留空则使用输出视频所在文件夹。",
         "tip_lut_path": "可选的 .cube 色彩 LUT，在编码前由 GPU 应用。\n支持 1D 和 3D LUT（例如 Adobe Premiere 或 DaVinci Resolve 导出的文件）。\n可在不重新编码的情况下修正黑色抬升、白平衡等问题。",
+        "burn_subtitles": "烧录字幕 (.ass)",
+        "burn_subtitles_placeholder": "可选，.ass/.ssa 文件，或填 auto 使用与视频同名的字幕",
+        "dialog_select_subtitles": "选择字幕 (.ass/.ssa)",
+        "tip_burn_subtitles": "在编码视频的同时把 .ass/.ssa 字幕烧进画面，无需额外转码。\n填写文件则对每个视频都使用它；填 auto 则使用与输入视频同名的 video.ass（或 video.ssa）。\n文字由随附的 ffmpeg 使用本机已安装的字体渲染。\n会重新编码整个视频，因此不与区间处理同时使用。预览中不显示。",
         "sharpen_strength": "锐化",
         "retarget_high_fps": "将 60 FPS 降至 30 FPS",
         "tip_sharpen_strength": "让边缘和细节更清晰，在导出时应用。\n0 表示关闭。0.2-0.5 为轻微增强；1.0 最强，可能显得生硬。\n画面越锐利所需文件越大，如果效果变差请调低 CQ 值。\n预览中不显示。",
@@ -521,4 +525,5 @@ ZH = {
         "error_tvai_data_dir_missing": "TVAI_MODEL_DATA_DIR 指向的目录不存在：{path}",
         "error_tvai_model_dir_missing": "TVAI_MODEL_DIR 指向的目录不存在：{path}",
         "error_tvai_ffmpeg_not_found": "TVAI ffmpeg 未找到：{path}",
+        "error_subtitles_not_found": "字幕文件未找到：{path}",
 }

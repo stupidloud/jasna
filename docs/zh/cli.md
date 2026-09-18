@@ -97,6 +97,8 @@ jasna --input input_folder --output output_folder
 | `--encoder-settings` | — | JSON 对象或逗号分隔的高级 `key=value` 设置，例如 `{"rc-lookahead":32}` 或 `rc-lookahead=32,bf=4`。见下文。 |
 | `--lut` | — | `.cube` 色彩 LUT（1D 或 3D），编码前由 GPU 应用。也可在 GUI 的编码设置部分设置。 |
 | `--sharpen` | `0` | 编码前锐化画面，取值 `0`（关闭）到 `1`（最强）。与 ffmpeg 的 `cas` 滤镜一致，无需二次转码。见[高级处理](advanced_processing.md)。 |
+| `--burn-subtitles` | — | 在唯一一次编码中把 `.ass`/`.ssa` 字幕烧进画面。可填文件路径，或填 `auto` 使用与每个输入视频同名的 `video.ass`（其次 `video.ssa`）。仅限离线导出；不能与 `--segments` 同时使用。见[高级处理](advanced_processing.md)。 |
+| `--subtitle-fonts-dir` | — | 为 `--burn-subtitles` 额外提供一个字体目录，在系统已安装字体之外使用。 |
 | `--retarget-high-fps` | 关闭 | 通过每两帧处理一帧实现 60 → 30 FPS（以及 59.94 → 29.97）。其他帧率不变；音频时序保持不变。 |
 | `--fmp4` | 关闭 | `.mp4`/`.mov` 输出在生成过程中即可播放，任务中断后仍可播放。不能与 `--stream` 或 `--segments` 同时使用。见[高级处理](advanced_processing.md)。 |
 | `--segments` | — | 只修复选定区间，例如 `10-25,01:10-01:30.5`。不能与 `--stream`、`--retarget-high-fps` 或 `--fmp4` 同时使用。见[区间](segments.md)。 |

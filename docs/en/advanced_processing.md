@@ -90,6 +90,36 @@ can look harsh. A sharper picture needs a bigger file, so if the result looks
 worse rather than better, lower the CQ value as well. The effect is not shown
 in the preview.
 
+## Burned-in subtitles
+
+Jasna can burn an `.ass`/`.ssa` subtitle file into the picture while it
+encodes, so a hard-subbed export needs no second pass through ffmpeg. Set
+**Burn-in subtitles** in the GUI's Encoding section, or use
+`--burn-subtitles`:
+
+```bash
+# One file for one video
+jasna --input in.mp4 --output out.mkv --burn-subtitles subs.ass
+
+# A whole folder: each video picks up video.ass (or video.ssa) next to it
+jasna --input folder_in --output folder_out --burn-subtitles auto
+```
+
+With `auto`, videos without a sidecar are exported without subtitles and a
+line in the log says so. The text is rendered by the bundled `ffmpeg`
+(libass) with the fonts installed on this computer; pass an extra font folder
+with `--subtitle-fonts-dir` when the script needs fonts that are not
+installed. Timing follows the player timeline, so subtitles authored against
+the source video line up, including with the 60→30 FPS export. The text is
+composited on the GPU after the color LUT and before sharpening, and the
+render runs a few frames ahead in a helper process, so the cost is small at
+1080p and grows with the frame size.
+
+Burning subtitles re-encodes every frame, so it cannot be combined with
+[segments](segments.md), and it is not applied to streaming or shown in the
+preview. Subtitle streams already inside the source are still copied as
+before.
+
 ## Encoder quality and custom settings
 
 Use the GUI's **CQ** control or `--cq` for encoder quality. The displayed or

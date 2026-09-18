@@ -38,6 +38,17 @@ CLI_HELP: dict[str, str] = {
         "AV1 35; AMD defaults: H.264 24, HEVC 25, AV1 32."
     ),
     "encoder_settings": 'Advanced encoder settings, as a JSON object or comma-separated key=value pairs (e.g. {"rc-lookahead":32} or rc-lookahead=32,bf=4)',
+    "burn_subtitles": (
+        "Burn an .ass/.ssa subtitle file into the picture during the single "
+        "encode pass. Pass a file, or 'auto' to use a sidecar with the same "
+        "name as each input video (video.ass, then video.ssa). Text is rendered "
+        "by the bundled ffmpeg and blended on GPU after the LUT. Offline exports "
+        "only; not available with --segments."
+    ),
+    "subtitle_fonts_dir": (
+        "Extra folder of fonts for --burn-subtitles, in addition to the fonts "
+        "installed on the system."
+    ),
     "post_export_action": "Action to run after all non-streaming exports finish.",
     "post_export_video_command": (
         "Shell command to run after each successful video export. Supports "
@@ -68,6 +79,7 @@ GUI_TOOLTIP_KEY_BY_DEST: dict[str, str] = {
     "codec": "codec",
     "cq": "encoder_cq",
     "encoder_settings": "encoder_custom_args",
+    "burn_subtitles": "burn_subtitles",
     "post_export_action": "post_export_action",
     "post_export_video_command": "post_export_video_command",
 }

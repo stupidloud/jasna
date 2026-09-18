@@ -209,6 +209,30 @@ class EncodingSection:
         )
         lut_browse_btn.pack(side="right")
 
+        # Burned-in subtitles
+        subtitles_row = ctk.CTkFrame(inner, fg_color="transparent")
+        subtitles_row.pack(fill="x", pady=(Sizing.PADDING_SMALL, 0))
+        subtitles_label = ctk.CTkLabel(subtitles_row, text=t("burn_subtitles"), text_color=Colors.TEXT_PRIMARY, font=(Fonts.FAMILY, Fonts.SIZE_NORMAL))
+        subtitles_label.pack(side="left")
+        subtitles_tip = ctk.CTkLabel(subtitles_row, text="ⓘ", text_color=Colors.TEXT_PRIMARY, font=(Fonts.FAMILY, Fonts.SIZE_TINY), cursor="hand2")
+        subtitles_tip.pack(side="left", padx=4)
+        Tooltip(subtitles_tip, get_tooltip("burn_subtitles"))
+
+        subtitles_input_row = ctk.CTkFrame(inner, fg_color="transparent")
+        subtitles_input_row.pack(fill="x", pady=(4, 0))
+        self._widgets["burn_subtitles"] = ctk.CTkEntry(
+            subtitles_input_row, fg_color=Colors.BG_CARD, border_color=Colors.BORDER,
+            text_color=Colors.TEXT_PRIMARY, placeholder_text=t("burn_subtitles_placeholder"),
+        )
+        self._widgets["burn_subtitles"].pack(side="left", fill="x", expand=True, padx=(0, 4))
+
+        subtitles_browse_btn = ctk.CTkButton(
+            subtitles_input_row, text="", image=create_icon("folder", 16, Colors.TEXT_PRIMARY), width=32, height=28,
+            fg_color=Colors.BG_CARD, hover_color=Colors.BORDER_LIGHT, text_color=Colors.TEXT_PRIMARY,
+            command=self._browse_burn_subtitles,
+        )
+        subtitles_browse_btn.pack(side="right")
+
         working_dir_row = ctk.CTkFrame(inner, fg_color="transparent")
         working_dir_row.pack(fill="x", pady=(Sizing.PADDING_SMALL, 0))
         working_dir_label = ctk.CTkLabel(working_dir_row, text=t("working_directory"), text_color=Colors.TEXT_PRIMARY, font=(Fonts.FAMILY, Fonts.SIZE_NORMAL))
@@ -263,6 +287,15 @@ class EncodingSection:
             self._widgets["lut_path"].delete(0, "end")
             self._widgets["lut_path"].insert(0, filepath)
 
+    def _browse_burn_subtitles(self):
+        filepath = filedialog.askopenfilename(
+            title=t("dialog_select_subtitles"),
+            filetypes=[("ASS/SSA subtitles", "*.ass *.ssa"), ("All files", "*.*")],
+        )
+        if filepath:
+            self._widgets["burn_subtitles"].delete(0, "end")
+            self._widgets["burn_subtitles"].insert(0, filepath)
+
     def _browse_working_directory(self):
         directory = filedialog.askdirectory(title=t("dialog_select_working_directory"))
         if directory:
@@ -311,6 +344,9 @@ class EncodingSection:
         self._widgets["lut_path"].delete(0, "end")
         self._widgets["lut_path"].insert(0, preset.lut_path or "")
 
+        self._widgets["burn_subtitles"].delete(0, "end")
+        self._widgets["burn_subtitles"].insert(0, preset.burn_subtitles or "")
+
         self._widgets["working_directory"].delete(0, "end")
         self._widgets["working_directory"].insert(0, preset.working_directory or "")
 
@@ -323,5 +359,6 @@ class EncodingSection:
             "retarget_high_fps": self._widgets["retarget_high_fps"].get() == 1,
             "fmp4": self._widgets["fmp4"].get() == 1,
             "lut_path": self._widgets["lut_path"].get().strip(),
+            "burn_subtitles": self._widgets["burn_subtitles"].get().strip(),
             "working_directory": self._widgets["working_directory"].get().strip(),
         }

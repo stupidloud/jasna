@@ -99,6 +99,7 @@ def _fake_section_widgets() -> dict:
         "retarget_high_fps": _FakeWidget(1),
         "fmp4": _FakeWidget(1),
         "lut_path": _FakeWidget(" /luts/a.cube "),
+        "burn_subtitles": _FakeWidget(" auto "),
         "working_directory": _FakeWidget(""),
         "post_export_action": _FakeValueMenu({"none": "何も", "command": "コマンド"}, "command"),
         "post_export_command": _FakeWidget("echo done "),
@@ -138,6 +139,7 @@ def test_sections_collect_internal_values_without_translation_lookups() -> None:
     assert values["rtx_quality"] == "ultra"
     assert values["image_restore_seed"] == 0
     assert values["lut_path"] == "/luts/a.cube"
+    assert values["burn_subtitles"] == "auto"
     assert values["enable_crossfade"] is False
     assert values["scene_detection"] is False
     assert values["retarget_high_fps"] is True

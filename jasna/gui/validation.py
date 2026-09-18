@@ -14,6 +14,15 @@ def validate_gui_start(settings: AppSettings) -> list[str]:
     except ValueError:
         errors.append(t("error_post_export_command_required"))
 
+    from jasna.media.subtitle_burn import BURN_SUBTITLES_AUTO
+    subtitles = (settings.burn_subtitles or "").strip()
+    if (
+        subtitles
+        and subtitles.lower() != BURN_SUBTITLES_AUTO
+        and not Path(subtitles).is_file()
+    ):
+        errors.append(t("error_subtitles_not_found", path=subtitles))
+
     if settings.secondary_restoration != "tvai":
         return errors
 

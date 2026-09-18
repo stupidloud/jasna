@@ -611,6 +611,69 @@ class _StopEncode(Exception):
     """Cuts _encode_frame short once the encoder input has been captured."""
 
 
+class TestSubtitleBurnIn:
+    def test_off_by_default(self, tmp_path):
+        enc = _make_encoder(tmp_path)
+        assert enc.subtitle_path is None
+        assert enc._subtitles is None
+
+    def test_source_seconds_start_at_the_stream_start(self, tmp_path):
+        enc = _make_encoder(tmp_path, time_base=Fraction(1, 1000), start_pts=1500)
+        assert enc._source_seconds(1500) == 0.0
+        assert enc._source_seconds(4000) == pytest.approx(2.5)
+        enc.pts_origin = 1000
+        assert enc._source_seconds(3000) == pytest.approx(2.5)
+
+    def test_frames_are_composited_after_the_lut_and_before_conversion(self, tmp_path, monkeypatch):
+        enc = _make_encoder(tmp_path, codec="h264", time_base=Fraction(1, 24), start_pts=48)
+        enc.metadata = _fake_metadata(video_height=4, video_width=4, time_base=Fraction(1, 24), start_pts=48)
+        order = []
+        enc._lut_applier = SimpleNamespace(apply=lambda frame: order.append("lut") or frame + 1)
+        enc._subtitles = SimpleNamespace(
+            composite=lambda frame, seconds: order.append(("subtitles", int(frame.max()), seconds)) or frame + 1
+        )
+        enc._converter = SimpleNamespace(
+            sample_dtype=torch.uint8,
+            uses_kernel=False,
+            convert_into=lambda frame, luma, chroma: order.append(("convert", int(frame.max()))),
+        )
+        enc.stream = SimpleNamespace(cuda_stream=1234, synchronize=lambda: None)
+        enc._cuda_ctx = None
+        enc._packed = torch.empty((6, 4), dtype=torch.uint8)
+
+        def stop(*args, **kwargs):
+            raise _StopEncode
+
+        monkeypatch.setattr(video_encoder_module, "stream_context", lambda _s: nullcontext())
+        monkeypatch.setattr(video_encoder_module, "_align_yuv_pitch", lambda p: p)
+        monkeypatch.setattr(video_encoder_module.av.VideoFrame, "from_dlpack", stop)
+
+        with pytest.raises(_StopEncode):
+            enc._encode_frame(torch.zeros(3, 4, 4, dtype=torch.uint8), pts=72)
+
+        assert order == ["lut", ("subtitles", 1, 1.0), ("convert", 2)]
+
+    def test_exit_closes_the_renderer(self, tmp_path):
+        enc = _make_encoder(tmp_path)
+        renderer = MagicMock()
+        enc._subtitles = renderer
+        enc.frame_buffer = deque()
+        enc._encode_queue = MagicMock()
+        enc._encode_thread = MagicMock()
+        enc._stop_sentinel = object()
+        enc._worker_error = RuntimeError("worker died")
+        enc.dst = MagicMock()
+        enc._src = MagicMock()
+        enc.out_stream = MagicMock()
+
+        with pytest.raises(RuntimeError, match="worker died"):
+            enc.__exit__(None, None, None)
+
+        renderer.close.assert_called_once()
+        assert enc._subtitles is None
+        enc.dst.close.assert_called_once()
+
+
 class TestSharpening:
     def test_no_sharpener_by_default(self, tmp_path):
         assert _make_encoder(tmp_path)._cas is None

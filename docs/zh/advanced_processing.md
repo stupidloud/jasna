@@ -76,6 +76,29 @@ jasna --input in.mp4 --output out.mkv --sharpen 0.5
 `0` 表示关闭，`0.2`–`0.5` 为轻微增强，`1` 最强且可能显得生硬。画面越锐利所需
 文件越大，如果结果反而变差，请同时调低 CQ 值。预览中不显示该效果。
 
+## 烧录字幕
+
+Jasna 可以在编码的同时把 `.ass`/`.ssa` 字幕烧进画面，因此导出硬字幕版本
+不需要再用 ffmpeg 转码一遍。在 GUI 的编码设置部分填写**烧录字幕**，或使用
+`--burn-subtitles`：
+
+```bash
+# 单个视频使用指定字幕
+jasna --input in.mp4 --output out.mkv --burn-subtitles subs.ass
+
+# 整个文件夹：每个视频使用旁边同名的 video.ass（或 video.ssa）
+jasna --input folder_in --output folder_out --burn-subtitles auto
+```
+
+使用 `auto` 时，没有同名字幕的视频会照常导出且不带字幕，日志中会有一行提示。
+文字由随附的 `ffmpeg`（libass）使用本机已安装的字体渲染；如果字幕需要未安装的
+字体，可用 `--subtitle-fonts-dir` 额外指定字体目录。时间轴与播放器一致，因此按源
+视频制作的字幕能够对齐，包括 60→30 FPS 导出。文字在 GPU 上于色彩 LUT 之后、锐化
+之前合成，渲染由辅助进程提前几帧完成，在 1080p 下开销很小，随画面尺寸增大而增加。
+
+烧录字幕会重新编码每一帧，因此不能与[区间](segments.md)同时使用，也不作用于流媒体，
+预览中不显示。源文件中原有的字幕流仍会像以前一样被复制。
+
 ## 编码器质量与自定义设置
 
 使用 GUI 的 **CQ** 控件或 `--cq` 调节编码器质量。显示或输入的数值会原样传给

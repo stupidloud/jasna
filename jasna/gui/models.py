@@ -170,6 +170,7 @@ class AppSettings:
     encoder_custom_args: str = ""
     sharpen_strength: float = 0.0
     lut_path: str = ""
+    burn_subtitles: str = ""  # .ass/.ssa path, or "auto" for a sidecar next to each video
     retarget_high_fps: bool = False
     fmp4: bool = False
 

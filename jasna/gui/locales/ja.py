@@ -300,6 +300,10 @@ JA = {
         "dialog_select_working_directory": "作業ディレクトリを選択",
         "tip_working_directory": "セグメント出力の組み立て中に一時ファイルを置くフォルダーです。\n空欄の場合は出力動画のフォルダーを使用します。",
         "tip_lut_path": "オプションの .cube カラー LUT。エンコード直前に GPU で適用されます。\n1D / 3D LUT 両方に対応（Adobe Premiere や DaVinci Resolve からのエクスポートなど）。\n再エンコードせずに黒浮きやホワイトバランスなどを補正できます。",
+        "burn_subtitles": "字幕を焼き込む (.ass)",
+        "burn_subtitles_placeholder": "オプション。.ass/.ssa ファイル、または auto で動画と同名の字幕を使用",
+        "dialog_select_subtitles": "字幕 (.ass/.ssa) を選択",
+        "tip_burn_subtitles": "エンコード中に .ass/.ssa 字幕を映像に焼き込みます。追加のパスは不要です。\nファイルを指定するとすべての動画に使用され、auto にすると入力動画と同名の video.ass（または video.ssa）を使用します。\nテキストは同梱の ffmpeg がこの PC にインストールされたフォントで描画します。\n動画全体を再エンコードするため、区間処理とは併用できません。プレビューには表示されません。",
         "sharpen_strength": "シャープネス",
         "retarget_high_fps": "60 FPS を 30 FPS に変換",
         "tip_sharpen_strength": "書き出しながら輪郭や細部をくっきりさせます。\n0 で無効。0.2〜0.5 は控えめな効果、1.0 は最も強く、不自然に見えることがあります。\nシャープにするとファイルが大きくなるため、結果が悪化する場合は CQ 値を下げてください。\nプレビューには反映されません。",
@@ -521,4 +525,5 @@ JA = {
         "error_tvai_data_dir_missing": "TVAI_MODEL_DATA_DIR が既存のディレクトリを指していません: {path}",
         "error_tvai_model_dir_missing": "TVAI_MODEL_DIR が既存のディレクトリを指していません: {path}",
         "error_tvai_ffmpeg_not_found": "TVAI ffmpeg が見つかりません: {path}",
+        "error_subtitles_not_found": "字幕ファイルが見つかりません: {path}",
 }

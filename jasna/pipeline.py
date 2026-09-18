@@ -20,6 +20,7 @@ from jasna.accelerator import vendor_for_device
 from jasna.media import UnsupportedColorspaceError, get_video_meta_data
 from jasna.media.video_encoder import NvidiaVideoEncoder
 from jasna.media.frame_rate import resolve_frame_rate_retarget
+from jasna.media.subtitle_burn import resolve_burn_subtitles
 from jasna.media.splice import (
     SplicePlan,
     build_splice_plan,
@@ -103,6 +104,8 @@ class Pipeline:
         segments: tuple[SegmentRange, ...] | None = None,
         splice_plan: SplicePlan | None = None,
         working_dir: Path | None = None,
+        burn_subtitles: str | None = None,
+        subtitle_fonts_dir: str | None = None,
     ) -> None:
         self.input_video = input_video
         self.output_video = output_video
@@ -133,6 +136,8 @@ class Pipeline:
         self.progress_callback = progress_callback
         self.lut_path = lut_path
         self.sharpen_strength = float(sharpen_strength)
+        self.burn_subtitles = burn_subtitles
+        self.subtitle_fonts_dir = subtitle_fonts_dir
         self.retarget_high_fps = bool(retarget_high_fps)
         self.fmp4 = bool(fmp4)
         self.segments = tuple(segments) if segments else None
@@ -542,7 +547,16 @@ class Pipeline:
                 "Only BT.709, BT.601, and BT.2020 non-constant-luminance are supported."
             )
 
+    def _resolve_subtitle_path(self) -> Path | None:
+        subtitle_path = resolve_burn_subtitles(self.burn_subtitles, self.input_video)
+        if subtitle_path is not None:
+            log.info("Burning subtitles from %s", subtitle_path)
+        elif self.burn_subtitles:
+            log.info("No .ass/.ssa sidecar next to %s; not burning subtitles", self.input_video.name)
+        return subtitle_path
+
     def _run_full(self, metadata) -> None:
+        subtitle_path = self._resolve_subtitle_path()
         frame_rate = resolve_frame_rate_retarget(
             metadata.video_fps_exact,
             enabled=self.retarget_high_fps,
@@ -589,6 +603,8 @@ class Pipeline:
             sharpen_strength=self.sharpen_strength,
             output_fps=frame_rate.output_fps,
             fmp4=self.fmp4,
+            subtitle_path=subtitle_path,
+            subtitle_fonts_dir=self.subtitle_fonts_dir,
         )
         try:
             self._run_pass(
@@ -601,6 +617,12 @@ class Pipeline:
             progress.close(ensure_completed_bar=True)
 
     def _run_smart(self, metadata) -> None:
+        if resolve_burn_subtitles(self.burn_subtitles, self.input_video) is not None:
+            # Smart rendering copies the untouched spans, so burned text would
+            # only appear inside the restored ranges.
+            raise ValueError(
+                "Burning subtitles re-encodes the whole video and cannot be combined with segments"
+            )
         codec = validate_smart_render(
             metadata,
             output_path=self.output_video,

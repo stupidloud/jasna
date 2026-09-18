@@ -180,3 +180,48 @@ class TestMainValidation:
     def test_fmp4_rejected_with_segments(self, tmp_path):
         with pytest.raises(SystemExit):
             _run_main_with_args(tmp_path, ["--segments", "10-20", "--fmp4"])
+
+    def test_burn_subtitles_rejected_for_streaming(self, tmp_path):
+        with pytest.raises(SystemExit):
+            _run_main_with_args(tmp_path, ["--stream", "--burn-subtitles", "auto"])
+
+    def test_burn_subtitles_rejected_with_segments(self, tmp_path):
+        with pytest.raises(SystemExit):
+            _run_main_with_args(tmp_path, ["--segments", "10-20", "--burn-subtitles", "auto"])
+
+    def test_subtitle_fonts_dir_requires_burn_subtitles(self, tmp_path):
+        with pytest.raises(SystemExit):
+            _run_main_with_args(tmp_path, ["--subtitle-fonts-dir", str(tmp_path)])
+
+    def test_burn_subtitles_missing_file_raises(self, tmp_path):
+        with pytest.raises(FileNotFoundError):
+            _run_main_with_args(tmp_path, ["--burn-subtitles", str(tmp_path / "missing.ass")])
+
+    def test_burn_subtitles_missing_fonts_dir_raises(self, tmp_path):
+        subs = tmp_path / "subs.ass"
+        subs.touch()
+        with pytest.raises(FileNotFoundError):
+            _run_main_with_args(
+                tmp_path,
+                ["--burn-subtitles", str(subs), "--subtitle-fonts-dir", str(tmp_path / "nope")],
+            )
+
+    def test_burn_subtitles_are_forwarded_to_the_pipeline(self, tmp_path):
+        subs = tmp_path / "subs.ass"
+        subs.touch()
+        fonts = tmp_path / "fonts"
+        fonts.mkdir()
+        pipeline_cls = _run_main_with_args(
+            tmp_path, ["--burn-subtitles", str(subs), "--subtitle-fonts-dir", str(fonts)]
+        )
+        assert pipeline_cls.call_args.kwargs["burn_subtitles"] == str(subs)
+        assert pipeline_cls.call_args.kwargs["subtitle_fonts_dir"] == str(fonts)
+
+    def test_burn_subtitles_auto_needs_no_file_up_front(self, tmp_path):
+        pipeline_cls = _run_main_with_args(tmp_path, ["--burn-subtitles", "auto"])
+        assert pipeline_cls.call_args.kwargs["burn_subtitles"] == "auto"
+        assert pipeline_cls.call_args.kwargs["subtitle_fonts_dir"] is None
+
+    def test_no_burn_subtitles_by_default(self, tmp_path):
+        pipeline_cls = _run_main_with_args(tmp_path, [])
+        assert pipeline_cls.call_args.kwargs["burn_subtitles"] is None

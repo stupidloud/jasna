@@ -60,3 +60,6 @@ class SessionConfig:
     fmp4: bool = False
     sharpen_strength: float = 0.0
     tvai_denoise: bool = False
+    # ".ass"/".ssa" path, or "auto" for a sidecar next to each input video.
+    burn_subtitles: str | None = None
+    subtitle_fonts_dir: str | None = None

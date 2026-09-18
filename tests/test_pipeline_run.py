@@ -193,6 +193,68 @@ class TestPipelineRun:
 
         assert encoder_cls.call_args.kwargs["fmp4"] is True
 
+    def test_burn_subtitles_reach_the_encoder(self, tmp_path):
+        p = _make_pipeline()
+        p.input_video = tmp_path / "in.mp4"
+        p.burn_subtitles = "auto"
+        p.subtitle_fonts_dir = str(tmp_path)
+        sidecar = tmp_path / "in.ass"
+        sidecar.touch()
+
+        reader_cls, _, _ = _make_two_readers([])
+        mock_encoder = MagicMock()
+        mock_encoder.__enter__ = MagicMock(return_value=mock_encoder)
+        mock_encoder.__exit__ = MagicMock(return_value=False)
+
+        with (
+            patch("jasna.pipeline.get_video_meta_data", return_value=_fake_metadata()),
+            patch("jasna.pipeline_threads.NvidiaVideoReader", reader_cls),
+            patch("jasna.pipeline.NvidiaVideoEncoder", return_value=mock_encoder) as encoder_cls,
+            patch("jasna.pipeline_threads.torch.cuda.set_device"),
+            patch("jasna.pipeline_threads.torch.inference_mode", return_value=MagicMock(__enter__=MagicMock(), __exit__=MagicMock(return_value=False))),
+        ):
+            p.run()
+
+        assert encoder_cls.call_args.kwargs["subtitle_path"] == sidecar
+        assert encoder_cls.call_args.kwargs["subtitle_fonts_dir"] == str(tmp_path)
+
+    def test_auto_subtitles_without_sidecar_encode_plain(self, tmp_path):
+        p = _make_pipeline()
+        p.input_video = tmp_path / "in.mp4"
+        p.burn_subtitles = "auto"
+
+        reader_cls, _, _ = _make_two_readers([])
+        mock_encoder = MagicMock()
+        mock_encoder.__enter__ = MagicMock(return_value=mock_encoder)
+        mock_encoder.__exit__ = MagicMock(return_value=False)
+
+        with (
+            patch("jasna.pipeline.get_video_meta_data", return_value=_fake_metadata()),
+            patch("jasna.pipeline_threads.NvidiaVideoReader", reader_cls),
+            patch("jasna.pipeline.NvidiaVideoEncoder", return_value=mock_encoder) as encoder_cls,
+            patch("jasna.pipeline_threads.torch.cuda.set_device"),
+            patch("jasna.pipeline_threads.torch.inference_mode", return_value=MagicMock(__enter__=MagicMock(), __exit__=MagicMock(return_value=False))),
+        ):
+            p.run()
+
+        assert encoder_cls.call_args.kwargs["subtitle_path"] is None
+
+    def test_burn_subtitles_are_rejected_for_segment_processing(self, tmp_path):
+        p = _make_pipeline()
+        p.input_video = tmp_path / "in.mp4"
+        p.burn_subtitles = str(tmp_path / "subs.ass")
+        (tmp_path / "subs.ass").touch()
+        p.segments = (SegmentRange(0.0, 1.0),)
+
+        with (
+            patch("jasna.pipeline.get_video_meta_data", return_value=_fake_metadata()),
+            patch("jasna.pipeline.validate_smart_render") as validate,
+            pytest.raises(ValueError, match="cannot be combined with segments"),
+        ):
+            p.run()
+
+        validate.assert_not_called()
+
     def test_fmp4_is_dropped_for_segment_processing(self):
         p = _make_pipeline()
         p.fmp4 = True

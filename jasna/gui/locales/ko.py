@@ -281,6 +281,10 @@ KO = {
         "dialog_select_working_directory": "작업 디렉터리 선택",
         "tip_working_directory": "세그먼트 출력을 조립하는 동안 임시 파일을 저장하는 폴더입니다.\n비워 두면 출력 동영상의 폴더를 사용합니다.",
         "tip_lut_path": "선택적인 .cube 컬러 LUT. 인코딩 직전에 GPU에서 적용됩니다.\n1D 및 3D LUT 모두 지원합니다 (예: Adobe Premiere, DaVinci Resolve 내보내기).\n재인코딩 없이 검정 들뜸, 화이트 밸런스 등을 보정할 수 있습니다.",
+        "burn_subtitles": "자막 굽기 (.ass)",
+        "burn_subtitles_placeholder": "선택 사항, .ass/.ssa 파일 또는 auto (동영상과 같은 이름의 자막 사용)",
+        "dialog_select_subtitles": "자막 (.ass/.ssa) 선택",
+        "tip_burn_subtitles": "인코딩하는 동안 .ass/.ssa 자막을 화면에 굽습니다. 추가 패스가 필요 없습니다.\n파일을 지정하면 모든 동영상에 사용되고, auto 를 입력하면 입력 동영상과 같은 이름의 video.ass(또는 video.ssa)를 사용합니다.\n텍스트는 번들된 ffmpeg 가 이 컴퓨터에 설치된 글꼴로 렌더링합니다.\n전체 동영상을 다시 인코딩하므로 구간 처리와 함께 사용할 수 없습니다. 미리보기에는 표시되지 않습니다.",
         "sharpen_strength": "샤프닝",
         "retarget_high_fps": "60 FPS를 30 FPS로 줄이기",
         "tip_sharpen_strength": "내보내는 동안 가장자리와 세부를 또렷하게 만듭니다.\n0이면 끔. 0.2~0.5는 약한 효과, 1.0은 가장 강하며 거칠어 보일 수 있습니다.\n선명할수록 파일이 커지므로 결과가 나빠지면 CQ 값을 낮추세요.\n미리보기에는 표시되지 않습니다.",
@@ -501,4 +505,5 @@ KO = {
         "error_tvai_data_dir_missing": "TVAI_MODEL_DATA_DIR이 존재하지 않는 디렉토리를 가리킵니다: {path}",
         "error_tvai_model_dir_missing": "TVAI_MODEL_DIR이 존재하지 않는 디렉토리를 가리킵니다: {path}",
         "error_tvai_ffmpeg_not_found": "TVAI ffmpeg를 찾을 수 없습니다: {path}",
+        "error_subtitles_not_found": "자막 파일을 찾을 수 없습니다: {path}",
 }

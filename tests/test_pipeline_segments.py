@@ -26,6 +26,7 @@ def test_smart_run_processes_only_render_spans_and_assembles_full_output(tmp_pat
     pipeline.lut_path = None
     pipeline.sharpen_strength = 0.0
     pipeline.retarget_high_fps = False
+    pipeline.burn_subtitles = None
     pipeline.segments = (SegmentRange(2.5, 3.0),)
     pipeline.working_dir = None
     pipeline._cancel_event = threading.Event()
@@ -108,6 +109,7 @@ def test_smart_run_uses_working_dir_for_temp_files(tmp_path) -> None:
     pipeline.lut_path = None
     pipeline.sharpen_strength = 0.0
     pipeline.retarget_high_fps = False
+    pipeline.burn_subtitles = None
     pipeline.segments = (SegmentRange(2.5, 3.0),)
     pipeline.working_dir = tmp_path / "scratch"
     pipeline._cancel_event = threading.Event()
@@ -148,6 +150,7 @@ def test_smart_run_rejects_precomputed_plan_for_different_segments() -> None:
     pipeline.output_video = Path("output.mp4")
     pipeline.codec = "h264"
     pipeline.retarget_high_fps = False
+    pipeline.burn_subtitles = None
     pipeline.segments = (SegmentRange(1, 2),)
     pipeline.splice_plan = SplicePlan(
         index=KeyframeIndex((0, 60), Fraction(1, 30), 0, 120),
